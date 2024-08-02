@@ -26,13 +26,13 @@ class Beam:
                 self.dr = self.length
             if self.dl < 0:
                 self.dl = 0
-    
-@dataclass
+
 class PointLoad:
     "Point loads"
-    shear: bool # shear or moment load
-    d: float    # distance, ft
-    m: float    # magnitude, lb
+    def __init__(self, shear, d, m):
+        self.shear = shear # shear or moment load
+        self.d = d         # distance, ft
+        self.m = m         # magnitude, lb
 
 class DistLoad:
     "Distributed loads"
