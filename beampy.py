@@ -28,6 +28,7 @@ class Beam:
     def correct(self):
         "Corrects invilad supports"
         if self.cantilever == True:
+            print("yes")
             self.dl = 0
             self.dr = self.length
         else:
@@ -35,6 +36,11 @@ class Beam:
                 self.dr = self.length
             if self.dl < 0:
                 self.dl = 0
+        
+        #Recalculate dependents
+        self.dist = self.dr-self.dl
+        self.support_index_l = np.abs(self.interval-self.dl).argmin()
+        self.support_index_r = np.abs(self.interval-self.dr).argmin()
     
     def addLoad(self, load):
         if type(load) == PointLoad:
@@ -75,14 +81,14 @@ class Beam:
         plt.show()
         
 class PointLoad:
-    "Point loads"
+    "Point load object"
     def __init__(self, d, m, shear=None):
         self.d = d                                    # distance, ft
         self.m = m                                    # magnitude, lb
         self.shear = True if shear is None else shear # shear or moment load
 
 class DistLoad:
-    "Distributed loads"
+    "Distributed load object"
     def __init__(self,dl, dr, ml, mr):
         self.dl = dl # start location
         self.dr = dr # end location
@@ -221,10 +227,12 @@ def get_rotation(beam):
     return rot - delta*direction
 
 def main():
-    beam = Beam(length=1,ei=290000000)
+    beam = Beam(cantilever=True, dl=0.25, dr=0.75, length=1,ei=290000000)
+    beam.correct()
+    print(beam.dl)
 
-    beam.addLoad(PointLoad(shear=False, d=beam.length/2, m=-2))
-    beam.addLoad(DistLoad(dl=0.5, dr=beam.length, ml=-2, mr=-2))
+    beam.addLoad(PointLoad(shear=True, d=beam.length/2, m=-2))
+    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-10, mr=-10))
     
     beam.calc_sm()
     beam.calc_def()
