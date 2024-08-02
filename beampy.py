@@ -16,6 +16,7 @@ class Beam:
         self.sections = 1000 if sections is None else sections           # number of integration sections
         self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
         self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
+        self.interval_width = self.length/self.sections                  # width of each interval slice
 
         # Correct supports
         if self.cantilever == True:
@@ -93,7 +94,7 @@ def point_load_calc(beam, point_loads):
     moment_sum = 0
     interval_width = beam.length/beam.sections
     for i in range(1, len(beam.interval)):
-        moment_sum += (shear[i]+shear[i-1])/2*interval_width
+        moment_sum += (shear[i]+shear[i-1])/2*beam.interval_width
         moment[i] += moment_sum
     
     return shear, moment
@@ -128,7 +129,7 @@ def dist_load_calc(beam, dist_loads):
     moment_sum = 0
     interval_width = beam.length/beam.sections
     for i in range(1, len(beam.interval)):
-        moment_sum += (shear[i]+shear[i-1])/2*interval_width
+        moment_sum += (shear[i]+shear[i-1])/2*beam.interval_width
         moment[i] += moment_sum
 
     return shear, moment
