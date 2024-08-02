@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
 
 class Beam:
     "Beam & support attributes"
@@ -92,7 +91,6 @@ def point_load_calc(beam, point_loads):
     
     # Integrate moment
     moment_sum = 0
-    interval_width = beam.length/beam.sections
     for i in range(1, len(beam.interval)):
         moment_sum += (shear[i]+shear[i-1])/2*beam.interval_width
         moment[i] += moment_sum
@@ -127,7 +125,6 @@ def dist_load_calc(beam, dist_loads):
     
     # Integrate moment
     moment_sum = 0
-    interval_width = beam.length/beam.sections
     for i in range(1, len(beam.interval)):
         moment_sum += (shear[i]+shear[i-1])/2*beam.interval_width
         moment[i] += moment_sum
@@ -157,15 +154,14 @@ def get_support_indices(beam):
 def get_deflection(beam, moment, rot, support_indices):
     rotation = np.zeros_like(moment)
     deflection = np.zeros_like(moment)
-    interval_width = beam.length/(len(moment)-1)
 
     rotation[0] = rot
     for i in range (1,len(rotation)):
-        rotation[i] += rotation[i-1] + interval_width/beam.ei*(moment[i-1]+moment[i])/2
+        rotation[i] += rotation[i-1] + beam.interval_width/beam.ei*(moment[i-1]+moment[i])/2
     
     deflection[0] = 0
     for i in range (1,len(deflection)):
-        deflection[i] += deflection[i-1] + interval_width*(rotation[i-1]+rotation[i])/2
+        deflection[i] += deflection[i-1] + beam.interval_width*(rotation[i-1]+rotation[i])/2
     deflection_adj = np.add(-deflection[support_indices[0]], deflection)
 
     return deflection_adj
@@ -195,9 +191,7 @@ def get_rotation(beam, moment, support_indices):
         deflection = get_deflection(beam, moment, rot, support_indices)
         def_test = deflection[support_indices[1]]
     return rot - delta*direction
-
-
-    
+  
 def plot_sm(beam, shear, moment):
     "Plots shear/moment diagram"
     plt.title("Shear/Moment Diagram")
@@ -221,7 +215,7 @@ def main():
     beam = Beam(length=1,ei=290000000)
 
     point_loads = []
-    point_loads.append(PointLoad(shear=False, d=beam.length/2, m=-2))
+    point_loads.append(PointLoad(shear=True, d=beam.length/2, m=-2))
 
     dist_loads = []
     #dist_loads.append(DistLoad(dl=0, dr=beam.length, ml=-1, mr=-1))
@@ -231,7 +225,6 @@ def main():
     support_indices = get_support_indices(beam)
     rot = get_rotation(beam, moment, support_indices)
     deflection = get_deflection(beam, moment, rot, support_indices)
-    print(deflection[support_indices[1]])
 
     #plot_sm(interval, shear, moment)
     plot_def(beam, deflection)
