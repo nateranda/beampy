@@ -17,9 +17,15 @@ class Beam:
         self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
         self.interval_width = self.length/self.sections                  # width of each interval slice
         self.support_index_l = np.abs(self.interval-self.dl).argmin()    # index of left support
-        self.support_index_r = np.abs(self.interval-self.dr).argmin()     # index of right support
+        self.support_index_r = np.abs(self.interval-self.dr).argmin()    # index of right support
 
-        # Correct supports
+        self.shear = np.zeros_like(self.interval)                        # shear array
+        self.moment = np.zeros_like(self.interval)                       # moment array
+        self.point_loads = []
+        self.dist_loads = []
+
+    def correct(self):
+        "Corrects invilad supports"
         if self.cantilever == True:
             self.dl = 0
             self.dr = self.length
@@ -28,7 +34,22 @@ class Beam:
                 self.dr = self.length
             if self.dl < 0:
                 self.dl = 0
-
+    
+    def addLoad(self, load):
+        if type(load) == PointLoad:
+            self.point_loads.append(load)
+        elif type(load) == DistLoad:
+            self.dist_loads.append(load)
+        else:
+            print("Invalid load added.")
+            exit()
+    
+    def calc(self):
+        pshear, pmoment = point_load_calc(self)
+        dshear, dmoment = dist_load_calc(self)
+        self.shear = np.add(pshear, dshear)
+        self.moment = np.add(pmoment, dmoment)
+    
 class PointLoad:
     "Point loads"
     def __init__(self, d, m, shear=None):
@@ -48,12 +69,12 @@ class DistLoad:
         self.mag = (self.ml+self.mr)/2*self.len                                  # load magnitude
         self.pos = self.dl + (self.ml+2*self.mr)/(3*(self.ml+self.mr))*self.len  # centroid w.r.t beam end
 
-def point_load_calc(beam, point_loads):
+def point_load_calc(beam):
     "Calculates shear & moment for point loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
-    for load in point_loads:
+    for load in beam.point_loads:
         # Shear loads
         if load.shear:
             for i, x in enumerate(beam.interval):
@@ -99,13 +120,13 @@ def point_load_calc(beam, point_loads):
     
     return shear, moment
 
-def dist_load_calc(beam, dist_loads):
+def dist_load_calc(beam):
     "Calculates shear & moment for distributed loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
     # Shear
-    for load in dist_loads:
+    for load in beam.dist_loads:
         for i, x in enumerate(beam.interval):
             if x >= load.dl and x <= load.dr:
                 shear[i] += load.ml*(x-load.dl)+(x-load.dl)**2*(load.mr-load.ml)/(2*load.len)
@@ -130,16 +151,6 @@ def dist_load_calc(beam, dist_loads):
     for i in range(1, len(beam.interval)):
         moment_sum += (shear[i]+shear[i-1])/2*beam.interval_width
         moment[i] += moment_sum
-
-    return shear, moment
-
-def load_calc(beam, point_loads, dist_loads):
-    "Calculates and combines point and shear loads"
-    pshear, pmoment = point_load_calc(beam, point_loads)
-    dshear, dmoment = dist_load_calc(beam, dist_loads)
-
-    shear = np.add(pshear, dshear)
-    moment = np.add(pmoment, dmoment)
 
     return shear, moment
 
@@ -206,21 +217,19 @@ def plot_def(beam, deflection):
 def main():
     beam = Beam(length=1,ei=290000000)
 
-    point_loads = []
-    point_loads.append(PointLoad(d=beam.length/2, m=-2))
+    beam.addLoad(PointLoad(d=beam.length/2, m=-2))
+    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-1, mr=-1))
+    beam.calc()
 
-    dist_loads = []
-    #dist_loads.append(DistLoad(dl=0, dr=beam.length, ml=-1, mr=-1))
+    #shear, moment = load_calc(beam, point_loads, dist_loads)
 
-    shear, moment = load_calc(beam, point_loads, dist_loads)
+    #rot = get_rotation(beam, moment)
+    #deflection = get_deflection(beam, moment, rot)
 
-    rot = get_rotation(beam, moment)
-    deflection = get_deflection(beam, moment, rot)
-
-    print(deflection[beam.support_index_r])
+    #print(deflection[beam.support_index_r])
 
     #plot_sm(beam, shear, moment)
-    plot_def(beam, deflection)
+    #plot_def(beam, deflection)
 
 if __name__ == "__main__":
     main()
