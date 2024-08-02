@@ -21,8 +21,9 @@ class Beam:
 
         self.shear = np.zeros_like(self.interval)                        # shear array
         self.moment = np.zeros_like(self.interval)                       # moment array
-        self.point_loads = []
-        self.dist_loads = []
+        self.deflection = np.zeros_like(self.interval)                   # deflection array
+        self.point_loads = []                                            # point load list
+        self.dist_loads = []                                             # distributed load list
 
     def correct(self):
         "Corrects invilad supports"
@@ -44,12 +45,35 @@ class Beam:
             print("Invalid load added.")
             exit()
     
-    def calc(self):
+    def calc_sm(self):
         pshear, pmoment = point_load_calc(self)
         dshear, dmoment = dist_load_calc(self)
         self.shear = np.add(pshear, dshear)
         self.moment = np.add(pmoment, dmoment)
     
+    def calc_def(self):
+        rot = get_rotation(self)
+        self.deflection = get_deflection(self, rot)
+    
+    def plot_sm(self):
+        "Plots shear/moment diagram"
+        plt.title("Shear/Moment Diagram")
+        plt.xlabel("Length (ft)")
+        plt.ylabel("Stress (lb/ft-lb)")
+        plt.axhline(0, color='black', linewidth=0.5)
+        plt.plot(self.interval, self.shear)
+        plt.plot(self.interval, self.moment)
+        plt.show()
+    
+    def plot_def(self):
+        "Plots shear/moment diagram"
+        plt.title("Shear/Moment Diagram")
+        plt.xlabel("Length (ft)")
+        plt.ylabel("Deflection (in)")
+        plt.axhline(0, color='black', linewidth=0.5)
+        plt.plot(self.interval, self.deflection)
+        plt.show()
+        
 class PointLoad:
     "Point loads"
     def __init__(self, d, m, shear=None):
@@ -154,13 +178,13 @@ def dist_load_calc(beam):
 
     return shear, moment
 
-def get_deflection(beam, moment, rot):
-    rotation = np.zeros_like(moment)
-    deflection = np.zeros_like(moment)
+def get_deflection(beam, rot):
+    rotation = np.zeros_like(beam.interval)
+    deflection = np.zeros_like(beam.interval)
 
     rotation[0] = rot
     for i in range (1,len(rotation)):
-        rotation[i] += rotation[i-1] + beam.interval_width/beam.ei*(moment[i-1]+moment[i])/2
+        rotation[i] += rotation[i-1] + beam.interval_width/beam.ei*(beam.moment[i-1]+beam.moment[i])/2
     
     deflection[0] = 0
     for i in range (1,len(deflection)):
@@ -169,12 +193,13 @@ def get_deflection(beam, moment, rot):
 
     return deflection_adj
 
-def get_rotation(beam, moment):
+def get_rotation(beam):
     "obtains initial rotation value by guess and check"
+    deflection = np.zeros_like(beam.interval)
     delta = 1/beam.ei*beam.rotDelta
     def_list = [0.,0.,0.]
     for i, rot in enumerate([-delta, 0, delta]):
-        deflection = get_deflection(beam, moment, rot)
+        deflection = get_deflection(beam, rot)
         def_list[i] = deflection[beam.support_index_r]
 
     if beam.cantilever or def_list[1] == 0:
@@ -191,45 +216,19 @@ def get_rotation(beam, moment):
     while abs(def_test) < abs(def_last):
         def_last = def_test
         rot += delta*direction
-        deflection = get_deflection(beam, moment, rot)
+        deflection = get_deflection(beam, rot)
         def_test = deflection[beam.support_index_r]
     return rot - delta*direction
-  
-def plot_sm(beam, shear, moment):
-    "Plots shear/moment diagram"
-    plt.title("Shear/Moment Diagram")
-    plt.xlabel("Length (ft)")
-    plt.ylabel("Stress (lb/ft-lb)")
-    plt.axhline(0, color='black', linewidth=0.5)
-    plt.plot(beam.interval, shear)
-    plt.plot(beam.interval, moment)
-    plt.show()
-
-def plot_def(beam, deflection):
-    "Plots shear/moment diagram"
-    plt.title("Shear/Moment Diagram")
-    plt.xlabel("Length (ft)")
-    plt.ylabel("Deflection (in)")
-    plt.axhline(0, color='black', linewidth=0.5)
-    plt.plot(beam.interval, deflection)
-    plt.show()
 
 def main():
     beam = Beam(length=1,ei=290000000)
 
-    beam.addLoad(PointLoad(d=beam.length/2, m=-2))
-    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-1, mr=-1))
-    beam.calc()
-
-    #shear, moment = load_calc(beam, point_loads, dist_loads)
-
-    #rot = get_rotation(beam, moment)
-    #deflection = get_deflection(beam, moment, rot)
-
-    #print(deflection[beam.support_index_r])
-
-    #plot_sm(beam, shear, moment)
-    #plot_def(beam, deflection)
+    beam.addLoad(PointLoad(shear=False, d=beam.length/2, m=-2))
+    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-2, mr=-2))
+    
+    beam.calc_sm()
+    beam.calc_def()
+    beam.plot_def()
 
 if __name__ == "__main__":
     main()
