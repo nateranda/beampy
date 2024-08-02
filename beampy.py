@@ -28,7 +28,6 @@ class Beam:
     def correct(self):
         "Corrects invilad supports"
         if self.cantilever == True:
-            print("yes")
             self.dl = 0
             self.dr = self.length
         else:
@@ -48,8 +47,7 @@ class Beam:
         elif type(load) == DistLoad:
             self.dist_loads.append(load)
         else:
-            print("Invalid load added.")
-            exit()
+            raise TypeError("Invalid load type.")
     
     def calc_sm(self):
         pshear, pmoment = point_load_calc(self)
@@ -72,8 +70,8 @@ class Beam:
         plt.show()
     
     def plot_def(self):
-        "Plots shear/moment diagram"
-        plt.title("Shear/Moment Diagram")
+        "Plots deflection diagram"
+        plt.title("Deflection Diagram")
         plt.xlabel("Length (ft)")
         plt.ylabel("Deflection (in)")
         plt.axhline(0, color='black', linewidth=0.5)
@@ -227,14 +225,21 @@ def get_rotation(beam):
     return rot - delta*direction
 
 def main():
-    beam = Beam(length=1,ei=290000000)
+    # Initialize a beam
+    beam = Beam(length=1, ei=29000000) # Defaults to simply-supported beam
     beam.correct()
 
-    beam.addLoad(PointLoad(shear=True, d=beam.length/2, m=-2))
-    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-10, mr=-10))
+    # Add point and distributed loads
+    beam.addLoad(PointLoad(d=0.5, m=-1))                # Shear load acting at midpoint
+    beam.addLoad(PointLoad(shear=False, d=0.25, m=-1))  # Moment load acting at 0.25 ft
+    beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1))    # Distributed constant shear load
     
+    # Calculate shear, moment, and deflection
     beam.calc_sm()
     beam.calc_def()
+
+    # Plot shear/moment diagram and deflection diagram
+    beam.plot_sm()
     beam.plot_def()
 
 if __name__ == "__main__":
