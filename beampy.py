@@ -227,9 +227,8 @@ def get_rotation(beam):
     return rot - delta*direction
 
 def main():
-    beam = Beam(cantilever=True, dl=0.25, dr=0.75, length=1,ei=290000000)
+    beam = Beam(length=1,ei=290000000)
     beam.correct()
-    print(beam.dl)
 
     beam.addLoad(PointLoad(shear=True, d=beam.length/2, m=-2))
     beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-10, mr=-10))
