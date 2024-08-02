@@ -224,7 +224,7 @@ def main():
     beam = Beam(length=1,ei=290000000)
 
     beam.addLoad(PointLoad(shear=False, d=beam.length/2, m=-2))
-    beam.addLoad(DistLoad(dl=0, dr=beam.length, ml=-2, mr=-2))
+    beam.addLoad(DistLoad(dl=0.5, dr=beam.length, ml=-2, mr=-2))
     
     beam.calc_sm()
     beam.calc_def()
