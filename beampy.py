@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class Beam:
     "Beam & support attributes"
     def __init__(self, length, ei, cantilever=None, dl=None, dr=None, sections=None, rotDelta=None):
+        
         self.cantilever = False if cantilever is None else cantilever    # cantilever or simply-suppoted
         self.length = length                                             # length, feet
         self.dl = 0 if dl is None else dl                                # left support location, feet
@@ -16,8 +17,6 @@ class Beam:
         self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
         self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
 
-    def __post_init__(self):
-        "Correct supports"
         if self.cantilever == True:
             self.dl = 0
             self.dr = self.length
