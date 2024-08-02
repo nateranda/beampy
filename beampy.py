@@ -16,6 +16,8 @@ class Beam:
         self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
         self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
         self.interval_width = self.length/self.sections                  # width of each interval slice
+        self.support_index_l = np.abs(self.interval-self.dl).argmin()    # index of left support
+        self.support_index_r = np.abs(self.interval-self.dr).argmin()     # index of right support
 
         # Correct supports
         if self.cantilever == True:
@@ -132,7 +134,7 @@ def dist_load_calc(beam, dist_loads):
     return shear, moment
 
 def load_calc(beam, point_loads, dist_loads):
-    "calculates and combines point and shear loads"
+    "Calculates and combines point and shear loads"
     pshear, pmoment = point_load_calc(beam, point_loads)
     dshear, dmoment = dist_load_calc(beam, dist_loads)
 
@@ -141,17 +143,7 @@ def load_calc(beam, point_loads, dist_loads):
 
     return shear, moment
 
-def get_support_indices(beam):
-    "gets index of each support in relation to interval"
-    differences = np.abs(beam.interval-beam.dl)
-    support_index_l = differences.argmin()
-
-    differences = np.abs(beam.interval-beam.dr)
-    support_index_r = differences.argmin()
-
-    return [support_index_l, support_index_r]
-
-def get_deflection(beam, moment, rot, support_indices):
+def get_deflection(beam, moment, rot):
     rotation = np.zeros_like(moment)
     deflection = np.zeros_like(moment)
 
@@ -162,17 +154,17 @@ def get_deflection(beam, moment, rot, support_indices):
     deflection[0] = 0
     for i in range (1,len(deflection)):
         deflection[i] += deflection[i-1] + beam.interval_width*(rotation[i-1]+rotation[i])/2
-    deflection_adj = np.add(-deflection[support_indices[0]], deflection)
+    deflection_adj = np.add(-deflection[beam.support_index_l], deflection)
 
     return deflection_adj
 
-def get_rotation(beam, moment, support_indices):
+def get_rotation(beam, moment):
     "obtains initial rotation value by guess and check"
     delta = 1/beam.ei*beam.rotDelta
     def_list = [0.,0.,0.]
     for i, rot in enumerate([-delta, 0, delta]):
-        deflection = get_deflection(beam, moment, rot, support_indices)
-        def_list[i] = deflection[support_indices[1]]
+        deflection = get_deflection(beam, moment, rot)
+        def_list[i] = deflection[beam.support_index_r]
 
     if beam.cantilever or def_list[1] == 0:
         return 0
@@ -188,8 +180,8 @@ def get_rotation(beam, moment, support_indices):
     while abs(def_test) < abs(def_last):
         def_last = def_test
         rot += delta*direction
-        deflection = get_deflection(beam, moment, rot, support_indices)
-        def_test = deflection[support_indices[1]]
+        deflection = get_deflection(beam, moment, rot)
+        def_test = deflection[beam.support_index_r]
     return rot - delta*direction
   
 def plot_sm(beam, shear, moment):
@@ -222,14 +214,13 @@ def main():
 
     shear, moment = load_calc(beam, point_loads, dist_loads)
 
-    support_indices = get_support_indices(beam)
-    rot = get_rotation(beam, moment, support_indices)
-    deflection = get_deflection(beam, moment, rot, support_indices)
+    rot = get_rotation(beam, moment)
+    deflection = get_deflection(beam, moment, rot)
 
-    print(deflection[support_indices[1]])
+    print(deflection[beam.support_index_r])
 
-    plot_sm(beam, shear, moment)
-    #plot_def(beam, deflection)
+    #plot_sm(beam, shear, moment)
+    plot_def(beam, deflection)
 
 if __name__ == "__main__":
     main()
