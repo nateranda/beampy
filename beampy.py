@@ -2,24 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
-@dataclass
 class Beam:
     "Beam & support attributes"
-    cantilever: bool         # cantilever or simply-suppoted
-    length: float            # length, feet
-    dl: float                # left support location, feet
-    dr: float                # right support location, feet
-    ei: float                # e*i, lb-in^2
-    sections: int = 1000     # number of integration sections
-    rotDelta: float = 0.0001 # how much to change rotation delta - multiplier of ei
+    def __init__(self, length, ei, cantilever=None, dl=None, dr=None, sections=None, rotDelta=None):
+        self.cantilever = False if cantilever is None else cantilever    # cantilever or simply-suppoted
+        self.length = length                                             # length, feet
+        self.dl = 0 if dl is None else dl                                # left support location, feet
+        self.dr = self.length if dr is None else dr                      # right support location, feet
+        self.dist = self.dr-self.dl                                      # distance between supports, feet
+        self.ei = ei                                                     # e*i, lb-in^2
+
+        self.sections = 1000 if sections is None else sections           # number of integration sections
+        self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
+        self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
 
     def __post_init__(self):
-        "Set defaults, correct supports, and initialize interval array"
-        if self.dl is None:
-            dl = 0
-        if self.dr is None:
-            dr = self.length
-
+        "Correct supports"
         if self.cantilever == True:
             self.dl = 0
             self.dr = self.length
@@ -27,13 +25,7 @@ class Beam:
             if self.dr > self.length:
                 self.dr = self.length
             if self.dl < 0:
-                self.dl = 0 
-
-        self.interval = np.linspace(0, self.length, num=self.sections+1)
-    
-    def dist(self) -> float:
-        "Returns distance between supports"
-        return self.dr-self.dl
+                self.dl = 0
     
 @dataclass
 class PointLoad:
@@ -79,7 +71,7 @@ def point_load_calc(beam, point_loads):
                 moment = np.add(load.d*load.m,moment)
 
             if not beam.cantilever:
-                vr = load.m*(load.d-beam.dl)/beam.dist()
+                vr = load.m*(load.d-beam.dl)/beam.dist
                 vl = load.m - vr
                 for i, x in enumerate(beam.interval):
                     if x >= beam.dl:
@@ -97,7 +89,7 @@ def point_load_calc(beam, point_loads):
                 moment = np.add(load.m, moment)
 
             if not beam.cantilever:
-                vr = load.m/beam.dist()
+                vr = load.m/beam.dist
                 vl = -vr
                 for i, x in enumerate(beam.interval):
                     if x >= beam.dl:
@@ -132,7 +124,7 @@ def dist_load_calc(beam, dist_loads):
             moment = np.add(load.mag()*load.pos(), moment)
 
         if not beam.cantilever:
-            vr = load.mag()*(load.pos()-beam.dl)/beam.dist()
+            vr = load.mag()*(load.pos()-beam.dl)/beam.dist
             vl = load.mag()-vr
             for i, x in enumerate(beam.interval):
                 if x >= beam.dl:
@@ -233,13 +225,7 @@ def plot_def(beam, deflection):
     plt.show()
 
 def main():
-    beam = Beam(
-        cantilever=False,
-        length=1,
-        dl=0,
-        dr=1,
-        ei=290000000
-    )
+    beam = Beam(length=1,ei=290000000)
 
     point_loads = []
     point_loads.append(PointLoad(shear=False, d=beam.length/2, m=-2))
