@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Beam:
     "Beam & support attributes"
     def __init__(self, length, ei, cantilever=None, dl=None, dr=None, sections=None, rotDelta=None):
-        
+
         self.cantilever = False if cantilever is None else cantilever    # cantilever or simply-suppoted
         self.length = length                                             # length, feet
         self.dl = 0 if dl is None else dl                                # left support location, feet
@@ -17,6 +17,7 @@ class Beam:
         self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
         self.interval = np.linspace(0, self.length, num=self.sections+1) # interval array
 
+        # Correct supports
         if self.cantilever == True:
             self.dl = 0
             self.dr = self.length
@@ -33,25 +34,17 @@ class PointLoad:
     d: float    # distance, ft
     m: float    # magnitude, lb
 
-@dataclass
 class DistLoad:
     "Distributed loads"
-    dl: float # start location
-    dr: float # end location
-    ml: float # start magnitude
-    mr: float # end magnitude
-
-    def len(self) -> float:
-        "Returns the span of the load"
-        return self.dr-self.dl
-    
-    def mag(self) -> float:
-        "Returns the magnitude of the load"
-        return (self.ml+self.mr)/2*self.len()
-    
-    def pos(self) -> float:
-        "Returns the centroid of the load in relation to the left end of the beam"
-        return self.dl + (self.ml+2*self.mr)/(3*(self.ml+self.mr))*self.len()
+    def __init__(self,dl, dr, ml, mr):
+        self.dl = dl # start location
+        self.dr = dr # end location
+        self.ml = ml # start magnitude
+        self.mr = mr # end magnitude
+        
+        self.len = self.dr-self.dl                                               # load span
+        self.mag = (self.ml+self.mr)/2*self.len                                  # load magnitude
+        self.pos = self.dl + (self.ml+2*self.mr)/(3*(self.ml+self.mr))*self.len  # centroid w.r.t beam end
 
 def point_load_calc(beam, point_loads):
     "Calculates shear & moment for point loads"
@@ -114,17 +107,17 @@ def dist_load_calc(beam, dist_loads):
     for load in dist_loads:
         for i, x in enumerate(beam.interval):
             if x >= load.dl and x <= load.dr:
-                shear[i] += load.ml*(x-load.dl)+(x-load.dl)**2*(load.mr-load.ml)/(2*load.len())
+                shear[i] += load.ml*(x-load.dl)+(x-load.dl)**2*(load.mr-load.ml)/(2*load.len)
             if x > load.dr:
-                shear[i] += load.mag()
+                shear[i] += load.mag
 
         if beam.cantilever:
-            shear = np.add(-load.mag(), shear)
-            moment = np.add(load.mag()*load.pos(), moment)
+            shear = np.add(-load.mag, shear)
+            moment = np.add(load.mag*load.pos, moment)
 
         if not beam.cantilever:
-            vr = load.mag()*(load.pos()-beam.dl)/beam.dist
-            vl = load.mag()-vr
+            vr = load.mag*(load.pos-beam.dl)/beam.dist
+            vl = load.mag-vr
             for i, x in enumerate(beam.interval):
                 if x >= beam.dl:
                     shear[i] -= vl
