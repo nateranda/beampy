@@ -29,10 +29,10 @@ class Beam:
 
 class PointLoad:
     "Point loads"
-    def __init__(self, shear, d, m):
-        self.shear = shear # shear or moment load
-        self.d = d         # distance, ft
-        self.m = m         # magnitude, lb
+    def __init__(self, d, m, shear=None):
+        self.d = d                                    # distance, ft
+        self.m = m                                    # magnitude, lb
+        self.shear = True if shear is None else shear # shear or moment load
 
 class DistLoad:
     "Distributed loads"
@@ -215,7 +215,7 @@ def main():
     beam = Beam(length=1,ei=290000000)
 
     point_loads = []
-    point_loads.append(PointLoad(shear=True, d=beam.length/2, m=-2))
+    point_loads.append(PointLoad(d=beam.length/2, m=-2))
 
     dist_loads = []
     #dist_loads.append(DistLoad(dl=0, dr=beam.length, ml=-1, mr=-1))
@@ -226,8 +226,10 @@ def main():
     rot = get_rotation(beam, moment, support_indices)
     deflection = get_deflection(beam, moment, rot, support_indices)
 
-    #plot_sm(interval, shear, moment)
-    plot_def(beam, deflection)
+    print(deflection[support_indices[1]])
+
+    plot_sm(beam, shear, moment)
+    #plot_def(beam, deflection)
 
 if __name__ == "__main__":
     main()
