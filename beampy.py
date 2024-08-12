@@ -50,8 +50,8 @@ class Beam:
             raise TypeError("Invalid load type.")
     
     def calc_sm(self, summary=None):
-        pshear, pmoment = point_load_calc(self)
-        dshear, dmoment = dist_load_calc(self)
+        pshear, pmoment = point_load_calc(self, 1)
+        dshear, dmoment = dist_load_calc(self, 1)
         self.shear = np.add(pshear, dshear)
         self.moment = np.add(pmoment, dmoment)
 
@@ -96,42 +96,57 @@ class Beam:
         
 class PointLoad:
     "Point load object"
-    def __init__(self, d, m, shear=None):
+    def __init__(self, d, m, shear=None, type=None):
         self.d = d                                    # distance, ft
         self.m = m                                    # magnitude, lb
         self.shear = True if shear is None else shear # shear or moment load
+        self.type = type                              # ASCE load type
+
+        # Validate type
+        valid_types = [None, "Dead", "D", "Live", "L", "Roof Live", "RL", "Wind", "W", "Snow", "S", "Seismic", "E"]
+        if type not in valid_types:
+            raise TypeError(f"Invalid load type {type}. Must be from list: {valid_types}")
 
 class DistLoad:
     "Distributed load object"
-    def __init__(self,dl, dr, ml, mr):
-        self.dl = dl # start location
-        self.dr = dr # end location
-        self.ml = ml # start magnitude
-        self.mr = mr # end magnitude
+    def __init__(self,dl, dr, ml, mr, type=None):
+        self.dl = dl     # start location
+        self.dr = dr     # end location
+        self.ml = ml     # start magnitude
+        self.mr = mr     # end magnitude
+        self.type = type # ASCE load type
         
         self.len = self.dr-self.dl                                               # load span
         self.mag = (self.ml+self.mr)/2*self.len                                  # load magnitude
         self.pos = self.dl + (self.ml+2*self.mr)/(3*(self.ml+self.mr))*self.len  # centroid w.r.t beam end
 
-def point_load_calc(beam):
+        # Validate type
+        valid_types = [None, "Dead", "D", "Live", "L", "Roof Live", "RL", "Wind", "W", "Snow", "S", "Seismic", "E"]
+        if type not in valid_types:
+            raise TypeError(f"Invalid load type {type}. Must be from list: {valid_types}")
+
+
+def point_load_calc(beam, mult):
     "Calculates shear & moment for point loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
     for load in beam.point_loads:
+        mag = load.m * mult
+
         # Shear loads
         if load.shear:
             for i, x in enumerate(beam.interval):
                 if x >= load.d:
-                    shear[i] += load.m
+                    shear[i] += mag
 
             if beam.cantilever:
-                shear = np.add(-load.m,shear)
-                moment = np.add(load.d*load.m,moment)
+                shear = np.add(-mag,shear)
+                moment = np.add(load.d*mag,moment)
 
             if not beam.cantilever:
-                vr = load.m*(load.d-beam.dl)/beam.dist
-                vl = load.m - vr
+                vr = mag*(load.d-beam.dl)/beam.dist
+                vl = mag - vr
                 for i, x in enumerate(beam.interval):
                     if x >= beam.dl:
                         shear[i] -= vl
@@ -142,13 +157,13 @@ def point_load_calc(beam):
         if not load.shear:
             for i, x in enumerate (beam.interval):
                 if x >= load.d:
-                    moment[i] -= load.m
+                    moment[i] -= mag
 
             if beam.cantilever:
-                moment = np.add(load.m, moment)
+                moment = np.add(mag, moment)
 
             if not beam.cantilever:
-                vr = load.m/beam.dist
+                vr = mag/beam.dist
                 vl = -vr
                 for i, x in enumerate(beam.interval):
                     if x >= beam.dl:
@@ -164,26 +179,30 @@ def point_load_calc(beam):
     
     return shear, moment
 
-def dist_load_calc(beam):
+def dist_load_calc(beam, mult):
     "Calculates shear & moment for distributed loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
     # Shear
     for load in beam.dist_loads:
+        magl = load.ml * mult
+        magr = load.mr * mult
+        mag = load.mag * mult
+
         for i, x in enumerate(beam.interval):
             if x >= load.dl and x <= load.dr:
-                shear[i] += load.ml*(x-load.dl)+(x-load.dl)**2*(load.mr-load.ml)/(2*load.len)
+                shear[i] += magl*(x-load.dl)+(x-load.dl)**2*(magr-magl)/(2*load.len)
             if x > load.dr:
-                shear[i] += load.mag
+                shear[i] += mag
 
         if beam.cantilever:
-            shear = np.add(-load.mag, shear)
-            moment = np.add(load.mag*load.pos, moment)
+            shear = np.add(-mag, shear)
+            moment = np.add(mag*load.pos, moment)
 
         if not beam.cantilever:
-            vr = load.mag*(load.pos-beam.dl)/beam.dist
-            vl = load.mag-vr
+            vr = mag*(load.pos-beam.dl)/beam.dist
+            vl = mag-vr
             for i, x in enumerate(beam.interval):
                 if x >= beam.dl:
                     shear[i] -= vl
@@ -246,13 +265,13 @@ def main():
     beam.correct()
 
     # Add point and distributed loads
-    beam.addLoad(PointLoad(d=0.5, m=-1))                # Shear load acting at midpoint
+    beam.addLoad(PointLoad(d=0.5, m=-1))     # Shear load acting at midpoint
     beam.addLoad(PointLoad(shear=False, d=0.25, m=-1))  # Moment load acting at 0.25 ft
     beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1))    # Distributed constant shear load
     
     # Calculate shear, moment, and deflection
     beam.calc_sm()
-    beam.calc_def()
+    #beam.calc_def()
 
     # Plot shear/moment diagram and deflection diagram
     #beam.plot_sm()
