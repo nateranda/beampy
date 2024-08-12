@@ -121,17 +121,59 @@ class DistLoad:
         self.pos = self.dl + (self.ml+2*self.mr)/(3*(self.ml+self.mr))*self.len  # centroid w.r.t beam end
 
         # Validate type
-        valid_types = [None, "Dead", "D", "Live", "L", "Roof Live", "RL", "Wind", "W", "Snow", "S", "Seismic", "E"]
+        valid_types = [None, "Dead", "D", "Live", "L", "Roof Live", "RL", "Snow", "S", "Rain", "R", "Wind", "W", "Seismic", "Earthquake", "E"]
         if type not in valid_types:
             raise TypeError(f"Invalid load type {type}. Must be from list: {valid_types}")
 
+lrfd = [[1.4,0,0,0,0,0,0],
+       [1.2,1.6,0.5,0.5,0.5,0,0],
+       [1.2,1,1.6,1.6,1.6,0.5,0],
+       [1.2,1,0.5,0.5,0.5,1,0],
+       [1.2,1,0,0.2,0,0,1],
+       [0.9,0,0,0,0,1,0],
+       [0.9,0,0,0,0,0,1]]
 
-def point_load_calc(beam, mult):
+asd = [[1,0,0,0,0,0,0],
+       [1,1,0,0,0,0,0],
+       [1,0,1,1,1,0,0],
+       [1,0.75,0.75,0.75,0.75,0,0],
+       [1,0,0,0,0,0.6,0.7],
+       [1,0.75,0.75,0.75,0.75,0.45,0],
+       [1,0.75,0,0.75,0,0,0.525],
+       [0.6,0,0,0,0,0.6,0],
+       [0.6,0,0,0,0,0,0.7]]
+
+def get_mult(load, lc, method):
+    if method == "lrfd":
+        mult_list = lrfd[lc]
+    if method == "asd":
+        mult_list = asd[lc]
+    else:
+        raise TypeError("Invalid method type.")
+    
+    match load:
+        case "Dead" | "D":
+            return mult_list[0]
+        case "Live" | "L":
+            return mult_list[1]
+        case "Roof Live" | "RL":
+            return mult_list[2]
+        case "Snow" | "S":
+            return mult_list[3]
+        case "Rain" | "R":
+            return mult_list[4]
+        case "Wind" | "W":
+            return mult_list[5]
+        case "Seismic" | "Earthquake" | "E":
+            return mult_list[6]
+
+def point_load_calc(beam, lc):
     "Calculates shear & moment for point loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
     for load in beam.point_loads:
+        mult = get_mult(load, lc, "lrfd")
         mag = load.m * mult
 
         # Shear loads
@@ -179,13 +221,14 @@ def point_load_calc(beam, mult):
     
     return shear, moment
 
-def dist_load_calc(beam, mult):
+def dist_load_calc(beam, lc):
     "Calculates shear & moment for distributed loads"
     shear = np.zeros_like(beam.interval)
     moment = np.zeros_like(beam.interval)
 
     # Shear
     for load in beam.dist_loads:
+        mult = get_mult(load, lc)
         magl = load.ml * mult
         magr = load.mr * mult
         mag = load.mag * mult
