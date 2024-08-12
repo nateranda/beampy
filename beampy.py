@@ -49,15 +49,31 @@ class Beam:
         else:
             raise TypeError("Invalid load type.")
     
-    def calc_sm(self):
+    def calc_sm(self, summary=None):
         pshear, pmoment = point_load_calc(self)
         dshear, dmoment = dist_load_calc(self)
         self.shear = np.add(pshear, dshear)
         self.moment = np.add(pmoment, dmoment)
+
+        if summary == None or summary == True:
+            max_shear = round(np.max(self.shear), 6)
+            min_shear = round(np.min(self.shear), 6)
+            max_moment = round(np.max(self.moment), 6)
+            min_moment = round(np.min(self.moment), 6)
+            print(f"Max Shear: {max_shear} lb")
+            print(f"Min Shear: {min_shear} lb")
+            print(f"Max Moment: {max_moment} lb-ft")
+            print(f"Min Moment: {min_moment} lb-ft")
     
-    def calc_def(self):
+    def calc_def(self, summary=None):
         rot = get_rotation(self)
         self.deflection = get_deflection(self, rot)
+
+        if summary == None or summary == True:
+            max_def = np.max(self.deflection)
+            min_def = np.min(self.deflection)
+            print(f"Max Positive Deflection: {max_def:.6e} in")
+            print(f"Max Negative Deflection: {min_def:.6e} in")
     
     def plot_sm(self):
         "Plots shear/moment diagram"
@@ -239,8 +255,8 @@ def main():
     beam.calc_def()
 
     # Plot shear/moment diagram and deflection diagram
-    beam.plot_sm()
-    beam.plot_def()
+    #beam.plot_sm()
+    #beam.plot_def()
 
 if __name__ == "__main__":
     main()
