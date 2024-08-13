@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 class Beam:
     "Beam & support attributes"
-    def __init__(self, length, ei, cantilever=None, dl=None, dr=None, sections=None, rotDelta=None):
+    def __init__(self, length, ei, method=None, cantilever=None, dl=None, dr=None, sections=None, rotDelta=None):
 
         self.cantilever = False if cantilever is None else cantilever    # cantilever or simply-suppoted
         self.length = length                                             # length, feet
@@ -11,6 +11,7 @@ class Beam:
         self.dr = self.length if dr is None else dr                      # right support location, feet
         self.dist = self.dr-self.dl                                      # distance between supports, feet
         self.ei = ei                                                     # e*i, lb-in^2
+        self.method = "lrfd" if method is None else method               # analysis method, asd or lrfd
 
         self.sections = 1000 if sections is None else sections           # number of integration sections
         self.rotDelta = 0.0001 if rotDelta is None else rotDelta         # how much to change rotation delta - multiplier of ei
@@ -49,9 +50,9 @@ class Beam:
         else:
             raise TypeError("Invalid load type.")
     
-    def calc_sm(self, summary=None):
-        pshear, pmoment = point_load_calc(self, 1)
-        dshear, dmoment = dist_load_calc(self, 1)
+    def calc_sm(self, summary=None, lc=None):
+        pshear, pmoment = point_load_calc(self, lc)
+        dshear, dmoment = dist_load_calc(self, lc)
         self.shear = np.add(pshear, dshear)
         self.moment = np.add(pmoment, dmoment)
 
@@ -64,6 +65,41 @@ class Beam:
             print(f"Min Shear: {min_shear} lb")
             print(f"Max Moment: {max_moment} lb-ft")
             print(f"Min Moment: {min_moment} lb-ft")
+    
+    def find_lc(self):
+        if self.method == "lrfd":
+            load_list = lrfd
+        elif self.method == "asd":
+            load_list = asd
+        else:
+            raise Exception("Invalid method type.")
+        
+        max_shear_list = []
+        min_shear_list = []
+        max_moment_list = []
+        min_moment_list = []
+
+        for i in range(0,len(load_list)):
+            pshear, pmoment = point_load_calc(self, i+1)
+            dshear, dmoment = dist_load_calc(self, i+1)
+            self.shear = np.add(pshear, dshear)
+            self.moment = np.add(pmoment, dmoment)
+
+            max_shear_list.append(round(np.max(self.shear), 6))
+            min_shear_list.append(round(np.min(self.shear), 6))
+            max_moment_list.append(round(np.max(self.moment), 6))
+            min_moment_list.append(round(np.min(self.moment), 6))
+        
+        max_shear = max(max_shear_list)
+        min_shear = min(min_shear_list)
+        max_moment = max(max_moment_list)
+        min_moment = min(min_moment_list)
+        
+        print(f"Max Shear: {max_shear} from load combination {max_shear_list.index(max_shear)+1}")
+        print(f"Min Shear: {min_shear} from load combination {min_shear_list.index(min_shear)+1}")
+        print(f"Max Moment: {max_moment} from load combination {max_moment_list.index(max_moment)+1}")
+        print(f"Min Moment: {min_moment} from load combination {min_moment_list.index(min_moment)+1}")
+
     
     def calc_def(self, summary=None):
         rot = get_rotation(self)
@@ -105,7 +141,7 @@ class PointLoad:
         # Validate type
         valid_types = [None, "Dead", "D", "Live", "L", "Roof Live", "RL", "Wind", "W", "Snow", "S", "Seismic", "E"]
         if type not in valid_types:
-            raise TypeError(f"Invalid load type {type}. Must be from list: {valid_types}")
+            raise Exception(f"Invalid load type {type}. Must be from list: {valid_types}")
 
 class DistLoad:
     "Distributed load object"
@@ -146,12 +182,14 @@ asd = [[1,0,0,0,0,0,0],
 def get_mult(load, lc, method):
     if method == "lrfd":
         mult_list = lrfd[lc]
-    if method == "asd":
+    elif method == "asd":
         mult_list = asd[lc]
     else:
-        raise TypeError("Invalid method type.")
+        raise Exception("Invalid method type.")
     
-    match load:
+    match load.type:
+        case None:
+            return 1
         case "Dead" | "D":
             return mult_list[0]
         case "Live" | "L":
@@ -166,6 +204,8 @@ def get_mult(load, lc, method):
             return mult_list[5]
         case "Seismic" | "Earthquake" | "E":
             return mult_list[6]
+        case _:
+            raise Exception("Invalid load type.")
 
 def point_load_calc(beam, lc):
     "Calculates shear & moment for point loads"
@@ -173,7 +213,10 @@ def point_load_calc(beam, lc):
     moment = np.zeros_like(beam.interval)
 
     for load in beam.point_loads:
-        mult = get_mult(load, lc, "lrfd")
+        if lc == None:
+            mult = 1
+        else:
+            mult = get_mult(load, lc-1, beam.method)
         mag = load.m * mult
 
         # Shear loads
@@ -228,7 +271,10 @@ def dist_load_calc(beam, lc):
 
     # Shear
     for load in beam.dist_loads:
-        mult = get_mult(load, lc)
+        if lc == None:
+            mult = 1
+        else:
+            mult = get_mult(load, lc-1, beam.method)
         magl = load.ml * mult
         magr = load.mr * mult
         mag = load.mag * mult
@@ -308,12 +354,15 @@ def main():
     beam.correct()
 
     # Add point and distributed loads
-    beam.addLoad(PointLoad(d=0.5, m=-1))     # Shear load acting at midpoint
-    beam.addLoad(PointLoad(shear=False, d=0.25, m=-1))  # Moment load acting at 0.25 ft
-    beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1))    # Distributed constant shear load
-    
+    beam.addLoad(PointLoad(d=0.5, m=-1, type="D"))     # Shear load acting at midpoint
+    beam.addLoad(PointLoad(shear=False, d=0.25, m=-1, type="E"))  # Moment load acting at 0.25 ft
+    beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1, type="E"))    # Distributed constant shear load
+
+    # Find critical load combination
+    beam.find_lc()
+
     # Calculate shear, moment, and deflection
-    beam.calc_sm()
+    #beam.calc_sm()
     #beam.calc_def()
 
     # Plot shear/moment diagram and deflection diagram
