@@ -1,5 +1,5 @@
 # Beampy
-An object-oriented Python package for calculating simply supported and cantilever beam stresses. It uses Numpy for array calculations and Matplotlib for plotting.
+An object-oriented Python package for calculating simply supported and cantilever beam stresses. It uses NumPy for array calculations and Matplotlib for plotting.
 
 ## Usage
 Start by initializing a beam with the `Beam` object:
