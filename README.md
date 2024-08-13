@@ -62,31 +62,31 @@ Min Moment: -0.249 from load combination 2
 
 ## Objects
 
-### `beampy.Beam(length, dl, dr, cantilever, ei, method, sections, rotDelta)`
+### `beampy.Beam(length float, dl float, dr float, cantilever bool, ei int, method bool, sections int, rotDelta bool)`
 ```
 length: length of beam, ft
 dl: location of left support from left end of beam, ft. Default left end of beam
 dr: location of right support from left end of beam, ft. Default right end of beam
-cantilever: cantilever or simply-supported beam, bool. Default False (simply-supported)
+cantilever: cantilever or simply-supported beam. Default False (simply-supported)
 ei: modulus of elasticity * moment of inertia, lb-in^2
 method: analysis method, lrfd or asd. Default lrfd
-sections: number of discrete section to use when integrating. Default 1000
+sections: number of discrete sections to use when integrating. Default 1000
 rotDelta: how much to change rotation in deflection calculation. Default 0.0001
 ```
 
-### `beampy.PointLoad(d, m, shear, type)`
+### `beampy.PointLoad(d float, m float, shear bool, type str)`
 ```
 d: distance of load from left end of beam, ft
 m: magnitude of load, lb
-shear: shear or moment, bool. Default True (shear)
-type: load type, string. Default None
+shear: shear or moment. Default True (shear)
+type: load type. Default None
 ```
 
-### `beampy.DistLoad(dl, dr, ml, mr, type)`
+### `beampy.DistLoad(dl float, dr float, ml float, mr float, type str)`
 ```
 dl: distance of start from left end of beam, ft
 dr: distance of end from left end of beam, ft
 ml: magnitude of start, lb
 mr: magnitude of end, lb
-type: load type, string. Default None
+type: load type. Default None
 ```
