@@ -354,20 +354,17 @@ def main():
     beam.correct()
 
     # Add point and distributed loads
-    beam.addLoad(PointLoad(d=0.5, m=-1, type="D"))     # Shear load acting at midpoint
-    beam.addLoad(PointLoad(shear=False, d=0.25, m=-1, type="E"))  # Moment load acting at 0.25 ft
-    beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1, type="E"))    # Distributed constant shear load
-
-    # Find critical load combination
-    beam.find_lc()
+    beam.addLoad(PointLoad(d=0.5, m=-1))                # Shear load acting at midpoint
+    beam.addLoad(PointLoad(shear=False, d=0.25, m=-1))  # Moment load acting at 0.25 ft
+    beam.addLoad(DistLoad(dl=0, dr=1, ml=-1, mr=-1))    # Distributed constant shear load
 
     # Calculate shear, moment, and deflection
-    #beam.calc_sm()
-    #beam.calc_def()
+    beam.calc_sm()
+    beam.calc_def()
 
     # Plot shear/moment diagram and deflection diagram
-    #beam.plot_sm()
-    #beam.plot_def()
+    beam.plot_sm()
+    beam.plot_def()
 
 if __name__ == "__main__":
     main()
