@@ -59,3 +59,34 @@ Min Shear: -2.2 from load combination 2
 Max Moment: 1.35 from load combination 2
 Min Moment: -0.249 from load combination 2
 ```
+
+## Objects
+
+### `beampy.Beam(length, dl, dr, cantilever, ei, method, sections, rotDelta)`
+```
+length: length of beam, ft
+dl: location of left support from left end of beam, ft. Default left end of beam
+dr: location of right support from left end of beam, ft. Default right end of beam
+cantilever: cantilever or simply-supported beam, bool. Default False (simply-supported)
+ei: modulus of elasticity * moment of inertia, lb-in^2
+method: analysis method, lrfd or asd. Default lrfd
+sections: number of discrete section to use when integrating. Default 1000
+rotDelta: how much to change rotation in deflection calculation. Default 0.0001
+```
+
+### `beampy.PointLoad(d, m, shear, type)`
+```
+d: distance of load from left end of beam, ft
+m: magnitude of load, lb
+shear: shear or moment, bool. Default True (shear)
+type: load type, string. Default None
+```
+
+### `beampy.DistLoad(dl, dr, ml, mr, type)`
+```
+dl: distance of start from left end of beam, ft
+dr: distance of end from left end of beam, ft
+ml: magnitude of start, lb
+mr: magnitude of end, lb
+type: load type, string. Default None
+```
