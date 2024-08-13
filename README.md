@@ -40,6 +40,9 @@ beam.plot_sm()
 beam.plot_def()
 ```
 
+![plot_sm graph](https://raw.githubusercontent.com/nateranda/beampy/main/static/plot_sm.png)
+![plot_def graph](https://raw.githubusercontent.com/nateranda/beampy/main/static/plot_def.png)
+
 You can also define load types and test different ASCE load combinations. Just assign a type to each load and find critical load combinations with `find_lc`:
 ```python
 beam.addLoad(PointLoad(d=0.5, m=-1, type="D"))                # Dead load
